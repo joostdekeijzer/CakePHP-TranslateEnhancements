@@ -30,13 +30,14 @@
 /**
  * TODO:
  * - Tests, tests, tests
+ * - add CakeValidationSet calls to setMethods ?
  */
 
 App::uses('ModelBehavior', 'Model');
 
 class TranslateValidateBehavior extends ModelBehavior {
 
-	public function beforeValidate(Model $Model) {
+	public function afterValidate(Model $Model) {
 		if( !$Model->Behaviors->enabled('Translate') || empty($Model->validate) ) {
 			return true;
 		}
@@ -61,6 +62,11 @@ class TranslateValidateBehavior extends ModelBehavior {
 			if (isset($data[$field])) {
 				if (is_array($data[$field])) {
 					foreach($data[$field] as $locale => $content) {
+						/**
+						 * Logic copied from ModelValidator->errors()
+						 * ???: add $fieldValidator->setMethods(ModelValidator->getMethods()) ?
+						 */
+						$fieldValidator->setValidationDomain($Model->validationDomain);
 						$errors = $fieldValidator->validate( array( $field => $content ), $Model->exists() );
 						foreach ($errors as $error) {
 							$Model->validator()->invalidate($fieldValidator->field, $error);
@@ -68,6 +74,9 @@ class TranslateValidateBehavior extends ModelBehavior {
 						}
 					}
 				}
+			}
+			if( isset($Model->validationErrors[$field]) ) {
+				$Model->validationErrors[$field] = array_unique ( $Model->validationErrors[$field] );
 			}
 		}
 
