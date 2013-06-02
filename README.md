@@ -66,7 +66,6 @@ class Attachment extends AppModel {
         'Translate' => array(
             'description',
         ),
-        'TranslateEnhancements.TranslateValidate',
     );
 }
 ```
