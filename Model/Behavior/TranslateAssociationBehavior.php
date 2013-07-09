@@ -83,7 +83,7 @@ class TranslateAssociationBehavior extends ModelBehavior {
  * Content must be fetched from database
  */
 	protected function _translateOneAfterBurner( Model $model, &$results, $assocKey, $assocData ) {
-		$settings = $model->{$assocKey}->Behaviors->Translate->settings[$assocKey];
+		$fields = $this->_retrieveFieldnames( $model->{$assocKey}->Behaviors->Translate->settings[$assocKey] );
 
 		$ids = array();
 		foreach( $results as &$item ) {
@@ -107,7 +107,7 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				'conditions' => array(
 					$model->{$assocKey}->escapeField($model->{$assocKey}->primaryKey) => $ids
 				),
-				'fields' => array_keys($settings),
+				'fields' => $fields,
 				'recursive' => 0,
 			) );
 
@@ -118,7 +118,7 @@ class TranslateAssociationBehavior extends ModelBehavior {
 			$translated = Hash::combine($translated, "{n}.{$assocKey}.id", "{n}.{$assocKey}");
 		}
 
-		$nullFill = array_fill_keys( array_keys($settings), null );
+		$nullFill = array_fill_keys( $fields, null );
 		foreach( $results as &$item ) {
 			if( isset($translated[ $item[$assocKey][$model->{$assocKey}->primaryKey] ]) ) {
 				$item[$assocKey] = array_merge( $item[$assocKey], $translated[ $item[$assocKey][$model->{$assocKey}->primaryKey] ] );
@@ -155,5 +155,20 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				}
 			} // else { not needed
 		}
+	}
+
+/**
+ * An array of fields can be <index> => 'fieldname' or 'fieldname' => 'alias' in Cake.
+ */
+	protected function _retrieveFieldnames( $settings ) {
+		$fields = array();
+		foreach( $settings as $key => $value ) {
+			if( is_numeric( $key ) && is_string( $value ) ) {
+				$fields[] = $value;
+			} else if( is_string($key) ) {
+				$fields[] = $key;
+			} // else { ignore...
+		}
+		return $fields;
 	}
 }
