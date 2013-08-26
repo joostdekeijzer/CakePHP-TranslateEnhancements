@@ -202,6 +202,11 @@ class TranslateAssociationBehavior extends ModelBehavior {
 			}
 			if ('hasMany' == $assocType) {
 				$query['conditions'] = array( sprintf('%s.%s', $assocKey, $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
+
+				// on self-relations: only go one deep!
+				if ($assocData['className'] == $model->name) {
+					$query['recursive'] = 0;
+				}
 			}
 			$item[$assocKey] = Hash::extract($model->{$assocKey}->find('all', $query), sprintf('{n}.%s', $assocKey));
 		}
