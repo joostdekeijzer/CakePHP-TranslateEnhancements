@@ -34,6 +34,27 @@ class TranslateAssociationBehavior extends ModelBehavior {
 /**
  * Recursively translate associated data
  */
+	function beforeFind (Model $model, $query) {
+		if (!isset($query['recursive']) || $query['recursive'] > 0) {
+			$this->settings[$model->alias]['query'] = $query + array('recursive' => 1);
+
+			foreach( array('hasMany', 'hasAndBelongsToMany') as $type ) {
+				foreach ($model->{$type} as $assocKey => $assocData) {
+					// we don't need the Translatable associations
+					if( isset($assocData['className']) && 'I18nModel' == $assocData['className'] ) continue;
+
+					// only when associated model is Translatable
+					if( !$model->{$assocKey}->Behaviors->enabled('Translate') ) continue;
+
+					// ok, so we do step 1 of our trick
+					$this->settings[$model->alias]['unbound'][$type] = $assocKey;
+					$model->unbindModel( array( $type => array( $assocKey ) ) );
+				}
+			}
+		}
+		return true;
+	}
+
 	function afterFind (Model $model, $results, $primary) {
 		if( !$primary || !is_array($results) ) return $results;
 
@@ -48,14 +69,18 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				// we don't need the Translatable associations
 				if( isset($assocData['className']) && 'I18nModel' == $assocData['className'] ) continue;
 
-				// only if available in the resultset
-				if( !isset($results[0][$assocKey]) ) continue;
-
 				// only when associated model is Translatable
 				if( !$model->{$assocKey}->Behaviors->enabled('Translate') ) continue;
 
-				// ok, so we do our trick
-				$this->_translateManyAfterBurner( $model, $results, $assocKey, $assocData );
+				// only if available in the resultset
+				if ( isset($results[0][$assocKey]) ) {
+					// ok, so we do our single-step trick
+					$this->_translateManyAfterBurner( $model, $results, $assocKey, $assocData );
+				} else if (isset($this->settings[$model->alias]['query']['recursive']) && $this->settings[$model->alias]['query']['recursive'] > 0) {
+					// step 2 of our twostep trick
+					$this->_translateManyByFind( $model, $results, $type, $assocKey, $assocData );
+				}
+
 			}
 		}
 
@@ -71,6 +96,8 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				$this->_translateOneAfterBurner( $model, $results, $assocKey, $assocData );
 			}
 		}
+
+		unset($this->settings[$model->alias]['query']);
 
 		if( $singleToList ) {
 			return $results[0];
@@ -157,6 +184,31 @@ class TranslateAssociationBehavior extends ModelBehavior {
 		}
 	}
 
+/**
+ * We prevented find in the beforeFind, now je find the requested items
+ */
+	protected function _translateManyByFind( Model $model, &$results, $assocType, $assocKey, $assocData ) {
+		$reenable = false;
+		if($model->{$assocKey}->Behaviors->enabled('TranslateAssociation')) {
+			$model->{$assocKey}->Behaviors->disable('TranslateAssociation');
+			$reenable = true;
+		}
+		foreach( $results as &$item ) {
+			$query = array('recursive' => $this->settings[$model->alias]['query']['recursive'] - 1);
+			if ('hasAndBelongsToMany' == $assocType) {
+				 $model->{$assocKey}->bindModel(array('hasOne' => array($assocData['with'])));
+				$query['fields'] = array( sprintf('%s.*', $assocKey) );
+				$query['conditions'] = array( sprintf('%s.%s', $assocData['with'], $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
+			}
+			if ('hasMany' == $assocType) {
+				$query['conditions'] = array( sprintf('%s.%s', $assocKey, $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
+			}
+			$item[$assocKey] = Hash::extract($model->{$assocKey}->find('all', $query), sprintf('{n}.%s', $assocKey));
+		}
+		if( $reenable ) {
+			$model->{$assocKey}->Behaviors->enable('TranslateAssociation');
+		}
+	}
 /**
  * An array of fields can be <index> => 'fieldname' or 'fieldname' => 'alias' in Cake.
  */
