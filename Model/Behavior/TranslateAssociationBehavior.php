@@ -36,7 +36,7 @@ class TranslateAssociationBehavior extends ModelBehavior {
  */
 	function beforeFind (Model $model, $query) {
 		$recursive = 1;
-		if (!isset($query['recursive']) || $query['recursive'] > 0) {
+		if (isset($query['recursive']) && $query['recursive'] > 0) {
 			$recursive = $query['recursive'];
 		}
 
