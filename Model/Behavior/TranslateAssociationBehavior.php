@@ -35,13 +35,46 @@ class TranslateAssociationBehavior extends ModelBehavior {
  * Recursively translate associated data
  */
 	function beforeFind (Model $model, $query) {
+		$recursive = 1;
 		if (!isset($query['recursive']) || $query['recursive'] > 0) {
+			$recursive = $query['recursive'];
+		}
+
+		$contain = array();
+		$hasContain = false;
+		if ($model->Behaviors->enabled('Containable')) {
+			if (isset($model->Behaviors->Containable->runtime[$model->alias]['contain'])) {
+				$hasContain = true;
+				$contain = $model->Behaviors->Containable->runtime[$model->alias]['contain'];
+			}
+
+			if (isset($query['contain'])) {
+				$hasContain = true;
+				if ($query['contain'] !== false) {
+					$contain = array_merge($contain, (array)$query['contain']);
+				}
+			}
+
+			if ($hasContain && empty($contain)) {
+				$recursive = -1;
+			}
+		}
+
+		if ((!$hasContain || !empty($contain)) && $recursive > 0) {
 			$this->settings[$model->alias]['query'] = $query + array('recursive' => 1);
+			$containments = array();
+			if ($hasContain) {
+				$this->settings[$model->alias]['query']['contain'] = $contain;
+				$this->settings[$model->alias]['query']['containments'] = $model->Behaviors->Containable->containments($model, $contain);
+			}
 
 			foreach( array('hasMany', 'hasAndBelongsToMany') as $type ) {
 				foreach ($model->{$type} as $assocKey => $assocData) {
 					// we don't need the Translatable associations
 					if( isset($assocData['className']) && 'I18nModel' == $assocData['className'] ) continue;
+
+					// are we contained?
+					if (isset($this->settings[$model->alias]['query']['containments']) && !isset($this->settings[$model->alias]['query']['containments']['models'][$assocKey])) continue;
 
 					// only when associated model is Translatable
 					if( !$model->{$assocKey}->Behaviors->enabled('Translate') ) continue;
@@ -69,6 +102,9 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				// we don't need the Translatable associations
 				if( isset($assocData['className']) && 'I18nModel' == $assocData['className'] ) continue;
 
+				// are we contained?
+				if (isset($this->settings[$model->alias]['query']['containments']) && !isset($this->settings[$model->alias]['query']['containments']['models'][$assocKey])) continue;
+
 				// only when associated model is Translatable
 				if( !$model->{$assocKey}->Behaviors->enabled('Translate') ) continue;
 
@@ -88,6 +124,9 @@ class TranslateAssociationBehavior extends ModelBehavior {
 			foreach ($model->{$type} as $assocKey => $assocData) {
 				// only if available in the resultset
 				if( !isset($results[0][$assocKey]) ) continue;
+
+				// are we contained?
+				if (isset($this->settings[$model->alias]['query']['containments']) && !isset($this->settings[$model->alias]['query']['containments']['models'][$assocKey])) continue;
 
 				// only when associated model is Translatable
 				if( !$model->{$assocKey}->Behaviors->enabled('Translate') ) continue;
