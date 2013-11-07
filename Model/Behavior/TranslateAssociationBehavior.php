@@ -30,11 +30,17 @@
 App::uses('ModelBehavior', 'Model');
 
 class TranslateAssociationBehavior extends ModelBehavior {
+	// bail-out on some query types
+	private $bailQueryTypes = array('count');
 
 /**
  * Recursively translate associated data
  */
 	function beforeFind (Model $model, $query) {
+		if( in_array($model->findQueryType, $this->bailQueryTypes) ) {
+			return true;
+		}
+
 		$recursive = 1;
 		if (isset($query['recursive']) && $query['recursive'] > 0) {
 			$recursive = $query['recursive'];
@@ -88,8 +94,8 @@ class TranslateAssociationBehavior extends ModelBehavior {
 		return true;
 	}
 
-	function afterFind (Model $model, $results, $primary) {
-		if( !$primary || !is_array($results) ) return $results;
+	function afterFind (Model $model, $results, $primary = false) {
+		if( !$primary || !is_array($results) || in_array($model->findQueryType, $this->bailQueryTypes) ) return $results;
 
 		$singleToList = false;
 		if( isset($results[$model->alias]) ) {
