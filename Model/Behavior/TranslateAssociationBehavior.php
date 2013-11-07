@@ -164,31 +164,34 @@ class TranslateAssociationBehavior extends ModelBehavior {
 			}
 		}
 
+		// when no id's are found, return
+		if( count($ids) == 0 ) return;
+
+
 		$translated = array();
-		if( count($ids) > 0 ) {
-			// problems can occur with self-joins
-			$model->{$assocKey}->unbindModel( array( 'belongsTo' => array( $assocKey ) , 'hasOne' => array( $assocKey ) ) );
 
-			$reenable = false;
-			if($model->{$assocKey}->Behaviors->enabled('TranslateAssociation')) {
-				$model->{$assocKey}->Behaviors->disable('TranslateAssociation');
-				$reenable = true;
-			}
+		// problems can occur with self-joins
+		$model->{$assocKey}->unbindModel( array( 'belongsTo' => array( $assocKey ) , 'hasOne' => array( $assocKey ) ) );
 
-			$translated = $model->{$assocKey}->find('all', array(
-				'conditions' => array(
-					$model->{$assocKey}->escapeField($model->{$assocKey}->primaryKey) => $ids
-				),
-				'fields' => $fields,
-				'recursive' => 0,
-			) );
-
-			if( $reenable ) {
-				$model->{$assocKey}->Behaviors->enable('TranslateAssociation');
-			}
-
-			$translated = Hash::combine($translated, "{n}.{$assocKey}.id", "{n}.{$assocKey}");
+		$reenable = false;
+		if($model->{$assocKey}->Behaviors->enabled('TranslateAssociation')) {
+			$model->{$assocKey}->Behaviors->disable('TranslateAssociation');
+			$reenable = true;
 		}
+
+		$translated = $model->{$assocKey}->find('all', array(
+			'conditions' => array(
+				$model->{$assocKey}->escapeField($model->{$assocKey}->primaryKey) => $ids
+			),
+			'fields' => $fields,
+			'recursive' => 0,
+		) );
+
+		if( $reenable ) {
+			$model->{$assocKey}->Behaviors->enable('TranslateAssociation');
+		}
+
+		$translated = Hash::combine($translated, "{n}.{$assocKey}.id", "{n}.{$assocKey}");
 
 		$nullFill = array_fill_keys( $fields, null );
 		foreach( $results as &$item ) {
