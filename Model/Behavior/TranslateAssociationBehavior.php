@@ -238,8 +238,10 @@ class TranslateAssociationBehavior extends ModelBehavior {
 			$model->{$assocKey}->Behaviors->disable('TranslateAssociation');
 			$reenable = true;
 		}
+
+		$recursive = $this->settings[$model->alias]['query']['recursive'] - 1;
 		foreach( $results as &$item ) {
-			$query = array('recursive' => $this->settings[$model->alias]['query']['recursive'] - 1);
+			$query = array('recursive' => $recursive);
 			if ('hasAndBelongsToMany' == $assocType) {
 				 $model->{$assocKey}->bindModel(array('hasOne' => array($assocData['with'])));
 				$query['fields'] = array( sprintf('%s.*', $assocKey) );
