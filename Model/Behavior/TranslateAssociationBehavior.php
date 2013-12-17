@@ -233,13 +233,18 @@ class TranslateAssociationBehavior extends ModelBehavior {
 	}
 
 /**
- * We prevented find in the beforeFind, now je find the requested items
+ * We prevented find in the beforeFind, now we find the requested items
  */
 	protected function _translateManyByFind( Model $model, &$results, $assocType, $assocKey, $assocData ) {
-		$reenable = false;
+		$reenable = $model->Behaviors->enabled();
+		foreach( $reenable as $behavior ) {
+			$model->Behaviors->disable($behavior);
+		}
+
+		$assocReenable = false;
 		if($model->{$assocKey}->Behaviors->enabled('TranslateAssociation')) {
 			$model->{$assocKey}->Behaviors->disable('TranslateAssociation');
-			$reenable = true;
+			$assocReenable = true;
 		}
 
 		$recursive = $this->settings[$model->alias]['query']['recursive'] - 1;
@@ -258,10 +263,14 @@ class TranslateAssociationBehavior extends ModelBehavior {
 					$query['recursive'] = 0;
 				}
 			}
+
 			$item[$assocKey] = Hash::extract($model->{$assocKey}->find('all', $query), sprintf('{n}.%s', $assocKey));
 		}
-		if( $reenable ) {
+		if( $assocReenable ) {
 			$model->{$assocKey}->Behaviors->enable('TranslateAssociation');
+		}
+		foreach( $reenable as $behavior ) {
+			$model->Behaviors->enable($behavior);
 		}
 	}
 /**
