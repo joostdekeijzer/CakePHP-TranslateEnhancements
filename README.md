@@ -108,6 +108,10 @@ class Article extends AppModel {
 Now, when we do `$result = $Article->find('all', array('recursive' => 2));`, the translated 
 Attachment description will be available.
 
+TranslatePaginateCustomQueryBehavior
+------------------------------------
+
+
 License
 -------
 MIT License (http://www.opensource.org/licenses/mit-license.php)
