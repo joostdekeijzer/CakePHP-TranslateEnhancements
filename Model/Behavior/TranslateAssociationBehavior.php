@@ -105,12 +105,13 @@ class TranslateAssociationBehavior extends ModelBehavior {
 
 		foreach( array('hasMany', 'hasAndBelongsToMany') as $type ) {
 			// rebind unbound
-			foreach($this->settings[$model->alias]['unbound'][$type] as $assocKey => $assocData) {
-				if(!array_key_exists($assocKey, $model->{$type})) {
-					$model->bindModel(array($type => array($assocKey => $assocData)));
+			if(isset($this->settings[$model->alias]['unbound'][$type])) {
+				foreach($this->settings[$model->alias]['unbound'][$type] as $assocKey => $assocData) {
+					if(!array_key_exists($assocKey, $model->{$type})) {
+						$model->bindModel(array($type => array($assocKey => $assocData)));
+					}
 				}
 			}
-
 
 			foreach ($model->{$type} as $assocKey => $assocData) {
 				// we don't need the Translatable associations
@@ -257,6 +258,15 @@ class TranslateAssociationBehavior extends ModelBehavior {
 		$recursive = $this->settings[$model->alias]['query']['recursive'] - 1;
 		foreach( $results as &$item ) {
 			$query = array('recursive' => $recursive);
+
+			if(isset($this->settings[$model->alias]['query']['contain'][$assocKey]) && is_array($this->settings[$model->alias]['query']['contain'][$assocKey])) {
+				foreach(array('conditions', 'fields', 'joins', 'order', 'limit', 'offset', 'group') as $key) {
+					if(isset($this->settings[$model->alias]['query']['contain'][$assocKey][$key])) {
+						$query[$key] = $this->settings[$model->alias]['query']['contain'][$assocKey][$key];
+					}
+				}
+			}
+
 			if ('hasAndBelongsToMany' == $assocType) {
 				 $model->{$assocKey}->bindModel(array('hasOne' => array($assocData['with'])));
 				$query['fields'] = array( sprintf('%s.*', $assocKey) );
