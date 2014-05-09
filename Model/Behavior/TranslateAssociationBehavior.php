@@ -86,7 +86,7 @@ class TranslateAssociationBehavior extends ModelBehavior {
 					if( !$model->{$assocKey}->Behaviors->enabled('Translate') ) continue;
 
 					// ok, so we do step 1 of our trick
-					$this->settings[$model->alias]['unbound'][$type] = $assocKey;
+					$this->settings[$model->alias]['unbound'][$type][$assocKey] = $assocData;
 					$model->unbindModel( array( $type => array( $assocKey ) ) );
 				}
 			}
@@ -104,6 +104,14 @@ class TranslateAssociationBehavior extends ModelBehavior {
 		}
 
 		foreach( array('hasMany', 'hasAndBelongsToMany') as $type ) {
+			// rebind unbound
+			foreach($this->settings[$model->alias]['unbound'][$type] as $assocKey => $assocData) {
+				if(!array_key_exists($assocKey, $model->{$type})) {
+					$model->bindModel(array($type => array($assocKey => $assocData)));
+				}
+			}
+
+
 			foreach ($model->{$type} as $assocKey => $assocData) {
 				// we don't need the Translatable associations
 				if( isset($assocData['className']) && 'I18nModel' == $assocData['className'] ) continue;
@@ -143,7 +151,6 @@ class TranslateAssociationBehavior extends ModelBehavior {
 		}
 
 		unset($this->settings[$model->alias]['query']);
-
 		if( $singleToList ) {
 			return $results[0];
 		} else {
