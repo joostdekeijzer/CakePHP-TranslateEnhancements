@@ -254,13 +254,28 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				 $model->{$assocKey}->bindModel(array('hasOne' => array($assocData['with'])));
 				$query['fields'] = array( sprintf('%s.*', $assocKey) );
 				$query['conditions'] = array( sprintf('%s.%s', $assocData['with'], $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
-			}
-			if ('hasMany' == $assocType) {
+			} else if ('hasMany' == $assocType) {
 				$query['conditions'] = array( sprintf('%s.%s', $assocKey, $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
 
 				// on self-relations: only go one deep!
 				if ($assocData['className'] == $model->name) {
 					$query['recursive'] = 0;
+				}
+			}
+			if (isset($assocData['order']) && !empty($assocData['order'])) {
+				$query['order'] = $assocData['order'];
+			}
+
+			// containments overrule assoc settings
+			if (
+				isset($this->settings[$model->alias]['query']['contain'])
+				&& isset($this->settings[$model->alias]['query']['contain'][$assocKey])
+			) {
+				if (isset($this->settings[$model->alias]['query']['contain'][$assocKey]['conditions'])) {
+					$query['conditions'] = Hash::merge($query['conditions'], $this->settings[$model->alias]['query']['contain'][$assocKey]['conditions']);
+				}
+				if (isset($this->settings[$model->alias]['query']['contain'][$assocKey]['order'])) {
+					$query['order'] = $this->settings[$model->alias]['query']['contain'][$assocKey]['order'];
 				}
 			}
 
