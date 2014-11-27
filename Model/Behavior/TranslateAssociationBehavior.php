@@ -258,12 +258,19 @@ class TranslateAssociationBehavior extends ModelBehavior {
 		$recursive = $this->settings[$model->alias]['query']['recursive'] - 1;
 		foreach( $results as &$item ) {
 			$query = array('recursive' => $recursive);
+			$contain = array();
 
 			if(isset($this->settings[$model->alias]['query']['contain'][$assocKey]) && is_array($this->settings[$model->alias]['query']['contain'][$assocKey])) {
+				$contain = $this->settings[$model->alias]['query']['contain'][$assocKey];
 				foreach(array('conditions', 'fields', 'joins', 'order', 'limit', 'offset', 'group') as $key) {
-					if(isset($this->settings[$model->alias]['query']['contain'][$assocKey][$key])) {
-						$query[$key] = $this->settings[$model->alias]['query']['contain'][$assocKey][$key];
+					if(isset($contain[$key])) {
+						$query[$key] = $contain[$key];
+						unset($contain[$key]);
 					}
+				}
+				if( !empty($contain) ) {
+					$query['contain'] = $contain;
+					$query['recursive'] = -1;
 				}
 			}
 
@@ -271,8 +278,14 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				 $model->{$assocKey}->bindModel(array('hasOne' => array($assocData['with'])));
 				$query['fields'] = array( sprintf('%s.*', $assocKey) );
 				$query['conditions'] = array( sprintf('%s.%s', $assocData['with'], $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
+				if( !empty($query['contain']) ) {
+					$query['contain'][] = $assocData['with'];
+				}
 			} else if ('hasMany' == $assocType) {
 				$query['conditions'] = array( sprintf('%s.%s', $assocKey, $assocData['foreignKey']) => $item[$model->alias][$model->primaryKey]);
+				if( !empty($query['contain']) ) {
+					$query['contain'][] = $assocKey;
+				}
 
 				// on self-relations: only go one deep!
 				if ($assocData['className'] == $model->name) {
@@ -296,7 +309,13 @@ class TranslateAssociationBehavior extends ModelBehavior {
 				}
 			}
 
-			$item[$assocKey] = Hash::extract($model->{$assocKey}->find('all', $query), sprintf('{n}.%s', $assocKey));
+			$assocKeyResults = $model->{$assocKey}->find('all', $query);
+			// nest 'side by side' models into $assocKey model when we contain
+			if( empty($contain) ) {
+				$item[$assocKey] = Hash::extract($assocKeyResults, sprintf('{n}.%s', $assocKey));
+			} else {
+				$item[$assocKey] = Hash::merge(Hash::extract($assocKeyResults, sprintf('{n}.%s', $assocKey)), Hash::remove($assocKeyResults, sprintf('{n}.%s', $assocKey)));
+			}
 		}
 		if( $assocReenable ) {
 			$model->{$assocKey}->Behaviors->enable('TranslateAssociation');
