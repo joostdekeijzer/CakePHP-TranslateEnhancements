@@ -36,6 +36,7 @@
 App::uses('ModelBehavior', 'Model');
 
 class TranslateValidateBehavior extends ModelBehavior {
+	protected $currentLocale;
 
 	public function afterValidate(Model $Model) {
 		if( !$Model->Behaviors->enabled('Translate') || empty($Model->validate) ) {
@@ -66,6 +67,7 @@ class TranslateValidateBehavior extends ModelBehavior {
 						 * Logic copied from ModelValidator->errors()
 						 * ???: add $fieldValidator->setMethods(ModelValidator->getMethods()) ?
 						 */
+						$this->currentLocale = $locale;
 						$fieldValidator->setValidationDomain($Model->validationDomain);
 						$errors = $fieldValidator->validate( array( $field => $content ), $Model->exists() );
 						foreach ($errors as $error) {
@@ -73,6 +75,7 @@ class TranslateValidateBehavior extends ModelBehavior {
 							$valid = false;
 						}
 					}
+					$this->currentLocale = null;
 				}
 			}
 			if( isset($Model->validationErrors[$field]) ) {
@@ -83,4 +86,22 @@ class TranslateValidateBehavior extends ModelBehavior {
 		return $valid;
 	}
 
+	public function isTranslateUnique(Model $Model, $fields, $rule) {
+		if( !$Model->Behaviors->enabled('Translate') ) {
+			return true;
+		}
+
+		$conditions = array();
+		foreach ($fields as $field => $value) {
+			$conditions[] = array(
+				'locale'      => $this->currentLocale,
+				'model'       => $Model->name,
+				'foreign_key !=' => $Model->id,
+				'field'       => $field,
+				'content'     => $value,
+			);
+		}
+
+		return !$Model->translateModel()->find('count', array('conditions' => $conditions, 'recursive' => -1));
+	}
 }
