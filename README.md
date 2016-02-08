@@ -26,7 +26,7 @@ class Article extends AppModel {
     );
 
     public $validate = array(
-        'title' => 'notempty',
+        'title' => 'notBlank',
         'slug'  => array(
             'a_z0_9' => array(
                 'rule' => '/^[a-z0-9][a-z0-9\-]{2,}$/',
@@ -88,7 +88,7 @@ class Article extends AppModel {
     );
 
     public $validate = array(
-        'title' => 'notempty',
+        'title' => 'notBlank',
         'slug'  => array(
             'a_z0_9' => array(
                 'rule' => '/^[a-z0-9][a-z0-9\-]{2,}$/',
