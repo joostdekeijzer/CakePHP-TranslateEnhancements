@@ -1,5 +1,5 @@
 {
-    "name": "joostdekeijzer/translate-enhancements",
+    "name": "dkzr/cakephp-translate-enhancements",
     "description": "CakePHP Translate Enhancements Plugin",
     "type": "cakephp-plugin",
     "keywords": ["cakephp", "i18n", "l10n"],
