@@ -1,6 +1,7 @@
 {
     "name": "dkzr/cakephp-translate-enhancements",
     "description": "CakePHP Translate Enhancements Plugin",
+    "abandoned": true,
     "type": "cakephp-plugin",
     "keywords": ["cakephp", "i18n", "l10n"],
     "homepage": "https://github.com/joostdekeijzer/CakePHP-TranslateEnhancements",
