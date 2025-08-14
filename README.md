@@ -1,5 +1,8 @@
-CakePHP-TranslateEnhancements
-=============================
+CakePHP-TranslateEnhancements (deprecated)
+==========================================
+
+> [!WARNING]
+> As of august 2025 this is deprecated software.
 
 CakePHP v2 plugin enhancing the Translate Behavior
 
